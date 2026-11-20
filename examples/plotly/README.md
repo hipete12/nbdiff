@@ -25,7 +25,7 @@ nbdiff before.ipynb after.ipynb                 # sources only
 nbdiff -o before.ipynb after.ipynb              # + outputs, figures diffed setting by setting
 nbdiff -o --stat before.ipynb after.ipynb       # one line per changed cell
 nbdiff -o -y -W 160 before.ipynb after.ipynb    # side by side
-nbdiff -o before.ipynb after.ipynb | less -R    # page through the coloured output
+nbdiff -o --color=always before.ipynb after.ipynb | less -R   # page with colours
 ```
 
 Open `visualized-diff.ipynb` in JupyterLab or VS Code to see the old and new figures
