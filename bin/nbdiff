@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Launcher for nbdiff that works straight from a source checkout (no install needed)."""
+import os
+import sys
+
+# Resolve symlinks so `ln -s /path/to/repo/bin/nbdiff ~/.local/bin/nbdiff` works.
+_here = os.path.dirname(os.path.realpath(__file__))
+_root = os.path.dirname(_here)
+if os.path.isfile(os.path.join(_root, "nbdiff", "__init__.py")) and _root not in sys.path:
+    sys.path.insert(0, _root)
+
+from nbdiff.cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main())
