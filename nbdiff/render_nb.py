@@ -368,6 +368,9 @@ class NotebookBuilder:
             md.append("")
         elif "source" in cd.changed and cd.source is not None:
             md += [fence(diff_block(cd.source, self.vo.context), "diff"), ""]
+        elif status == "moved" and cd.b.source.strip():
+            md += ["<details><summary>Source (unchanged)</summary>", "",
+                   fence(cd.b.source, _fence_lang(cd.b, nd.b)), "", "</details>", ""]
 
         # outputs (text-level summary; rendered outputs follow in Before/After cells)
         if cd.outputs is not None and cd.outputs.changed and status not in ("added", "deleted"):
