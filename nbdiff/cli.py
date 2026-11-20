@@ -628,6 +628,10 @@ class Runner:
                 self.inputs.append(os.path.join(cmp.root, fp.new_path))
             st = self.report(a, b, header=header, heading=fp.display, note=note,
                              extra={"git_status": fp.status, "path": fp.display})
+            if st == EXIT_SAME and fp.status in "RC" and self.printing and not args.brief:
+                self.write_lines([self.style("nbdiff --diff: %s %s (%s); no differences in the compared aspects" % (
+                    "renamed" if fp.status == "R" else "copied", fp.display,
+                    "%d%% similar" % fp.score if fp.score is not None else "similar"), "bold"), ""])
             status = _combine(status, st)
         if self.printing and not args.brief and not args.no_summary:
             if not pairs:
