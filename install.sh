@@ -8,7 +8,7 @@ bin_dir="${1:-$HOME/.local/bin}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 target="$bin_dir/nbdiff"
 
-command -v python3 >/dev/null || { echo "nbdiff needs python3 (3.9+) on PATH" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "nbdiff needs python3 (3.10+) on PATH" >&2; exit 1; }
 
 mkdir -p "$bin_dir"
 if [[ -e "$target" && ! -L "$target" ]]; then

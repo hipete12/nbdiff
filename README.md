@@ -12,7 +12,7 @@ It also works across git revisions (`--diff main feature`), and it can write the
 whole diff as a rendered notebook (`--visualize diff.ipynb`). There, plots and
 tables from *before* and *after* appear next to each other.
 
-Pure Python 3.9+ standard library, no dependencies.
+Pure Python 3.10+ standard library, no dependencies.
 
 ![nbdiff -o before.ipynb after.ipynb](docs/terminal.png)
 

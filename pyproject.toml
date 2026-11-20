@@ -7,7 +7,7 @@ name = "nbdiff-cli"
 dynamic = ["version"]
 description = "diff(1) for Jupyter notebooks: cell-aware source, output and metadata diffs, with an optional rendered diff notebook"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["jupyter", "notebook", "ipynb", "diff", "cli"]
 classifiers = [
     "Environment :: Console",
