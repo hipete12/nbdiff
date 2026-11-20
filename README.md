@@ -80,8 +80,12 @@ What is compared:
 | cell type and source | always | |
 | outputs | no | `-o, --outputs` |
 | cell + notebook metadata, attachments | no | `-m, --metadata` |
-| execution counts | no | `--execution-count` |
+| execution counts and execution timing metadata | no | `--execution-count` |
 | all of the above | | `-A, --all` |
+
+Execution timing metadata (`metadata.execution`, written by JupyterLab's "record timing",
+nbclient and papermill, and `ExecuteTime` from the old extension) changes on every run, so
+it is treated like execution counts: ignored unless you ask for `--execution-count`.
 
 Aspects that are *not* compared but differ are still pointed out, for example
 `(outputs differ; use -o to show)` on the cell line and `not compared but different:
@@ -97,13 +101,53 @@ Outputs are normalized before comparison, so the diff shows what you would *see*
 * carriage returns are applied the way a frontend renders them, so a tqdm progress bar
   that only redrew differently counts as unchanged;
 * ANSI colour codes in tracebacks are stripped;
-* JSON outputs (widgets, Plotly, Vega...) are pretty-printed and diffed line by line;
+* JSON outputs (widgets, Vega...) are pretty-printed and diffed line by line;
+* Plotly figures are diffed setting by setting (see below);
 * images and other binary data are compared by content and summarised by size and pixel
   dimensions: `image/png: changed (333 B → 416 B, 160×110 → 200×110 px)`;
 * for rich outputs with several representations (e.g. a DataFrame's `text/plain` +
   `text/html`), the most readable one is diffed and the others are summarised.
 
 Added or deleted outputs are printed in full up to `--max-lines` (default 50) lines.
+
+### Plotly figures
+
+A plotly figure is stored as `application/vnd.plotly.v1+json` and/or as `text/html`
+that embeds the same figure in a `Plotly.newPlot(...)` call. Compared as-is, every
+re-run looks like a change (the HTML gets a new random `<div id>`), and the diff is
+useless: the HTML holds the whole figure on one line, and pretty-printed JSON puts
+every data point on its own line. nbdiff instead:
+
+* turns the figure (from the JSON, or extracted from the HTML) into one line per
+  setting, and summarises data arrays by count, min/max/mean and a content hash.
+  Arrays are compared by value, so the same data saved as a list or as plotly 6's
+  base64 typed array compares equal;
+* skips the HTML copy when the JSON is there, and reduces plotly's "load plotly.js"
+  output (a CDN script, or all of plotly.js inlined) to one line;
+* pairs outputs by their mimetypes, so a figure is compared with the figure, not with
+  a loader script that moved into its cell.
+
+A re-executed figure with the same data is therefore unchanged, and a real change
+reads like this:
+
+```diff
+    ~ output 1 [display_data] modified
+        application/vnd.plotly.v1+json:
+        @@ -56,12 +56,13 @@
+         data[4].xaxis: "x"
+        -data[4].y: 365 values, min 9, max 222, mean 133.658  #042078c9
+        +data[4].y: 365 values, min 88.5, max 187, mean 133.615  #92809b00
+         data[4].yaxis: "y"
+        -layout.legend.title.text: "station"
+        +layout.hovermode: "x unified"
+        +layout.legend.title.text: ""
+         layout.template: 173 settings  #f7a7df17
+        -layout.title.text: "Daily rides per station"
+        +layout.title.text: "Daily rides per station, 7-day rolling mean"
+```
+
+[`examples/plotly/`](examples/plotly) has an executed pair of plotly notebooks and the
+`--visualize` result, where the Before/After figures are live and interactive.
 
 ## How cells are matched
 
@@ -205,7 +249,7 @@ Or one-off: `GIT_EXTERNAL_DIFF=nbdiff git diff main`, or the difftool route:
 | `--no-outputs`, `--no-metadata`, `--no-execution-count`, `--sources-only` | turn aspects off |
 | `--visualize=FILE` | write a rendered diff notebook instead of printing |
 | `--match=auto\|id\|content`, `--match-threshold=X`, `--no-moves` | cell matching |
-| `--ignore-metadata=PAT` | ignore metadata keys (dotted path glob), e.g. `execution`, `ExecuteTime`, `collapsed`, `language_info.*` |
+| `--ignore-metadata=PAT` | ignore metadata keys (dotted path glob), e.g. `collapsed`, `scrolled`, `language_info.*`, `widgets` |
 | `--ignore-mime=PAT` | ignore output mimetypes, e.g. `'image/*'`, `text/html` |
 | `--unchanged=collapse\|list\|show\|hide`, `--suppress-common-cells` | how unchanged cells are shown |
 | `--max-lines=NUM` | limit for printing added/deleted outputs (0 = no limit) |
@@ -267,6 +311,7 @@ outputs. For example, `-o -I 'took [0-9.]+ s'` ignores timing lines in outputs.
 ```bash
 python3 -m unittest discover -s tests -t tests -v   # no dependencies needed
 python3 examples/make_examples.py                  # regenerate the example notebooks
+python3 examples/plotly/make_plotly_examples.py    # plotly examples (needs plotly, pandas, nbclient, ipykernel)
 ```
 
 The test suite includes a byte-for-byte comparison of the unified/context/normal hunks
