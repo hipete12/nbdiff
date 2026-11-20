@@ -11,7 +11,8 @@ Every aligned cell gets a :class:`CellDiff` with a status
 
 The *scope* (which aspects count as differences) is chosen by the caller:
 cell type and source are always compared; outputs, metadata (cell and
-notebook level, incl. attachments) and execution counts are opt-in.
+notebook level, incl. attachments) and execution counts (incl. execution
+timing metadata) are opt-in.
 Differences in aspects outside the scope are still detected and recorded
 as *hints* so the user can be told that, e.g., "outputs differ (use -o)".
 """
@@ -29,6 +30,11 @@ from .outputs import OutputsDiff, diff_outputs, outputs_equal
 from .textdiff import CompareOptions, LineDiff, split_lines
 
 STATUSES = ("unchanged", "modified", "added", "deleted", "moved")
+
+# Cell metadata written on every run (timestamps from JupyterLab's "record
+# timing", nbclient/papermill, and the old ExecuteTime extension).  Like
+# execution counts, it is only compared with --execution-count.
+EXECUTION_METADATA = ("execution", "ExecuteTime")
 
 
 @dataclass
@@ -170,7 +176,10 @@ def _cell_pair(a: Cell, b: Cell, opts: DiffOptions, status: str = "modified") ->
             if opts.execution_count:
                 cd.changed.append("execution count")
 
-    meta = diff_json(a.metadata, b.metadata, "", opts.ignore_metadata)
+    ignore = list(opts.ignore_metadata)
+    if not opts.execution_count:
+        ignore.extend(EXECUTION_METADATA)
+    meta = diff_json(a.metadata, b.metadata, "", ignore)
     att = diff_json(a.attachments or {}, b.attachments or {}, "", ())
     if opts.metadata:
         cd.metadata, cd.attachments = meta, att

@@ -36,7 +36,7 @@ def _output_change(oc: OutputChange, n: int) -> Dict[str, Any]:
         d["name"] = o.name
     if oc.status in ("added", "deleted"):
         d["summary"] = o.describe()
-        d["mimetypes"] = list(o.parts)
+        d["mimetypes"] = list(o.raw.get("data") or {}) or list(o.parts)
     elif oc.status == "modified":
         parts = []
         for pc in oc.parts:

@@ -44,7 +44,7 @@ Notebook options:
                                   errors, ...)
   -m, --metadata                also compare cell and notebook metadata and
                                   attachments
-      --execution-count         also compare execution counts
+      --execution-count         also compare execution counts (and timing metadata)
   -A, --all                     same as -o -m --execution-count
       --no-outputs, --no-metadata, --no-execution-count
                                 turn an aspect off again (after -A, or with
@@ -57,8 +57,9 @@ Notebook options:
                                   to be paired as 'modified' (default 0.5)
       --no-moves                report moved cells as deleted + added
       --ignore-metadata=PAT     ignore metadata keys matching PAT (dotted path,
-                                  glob), e.g. 'execution', 'ExecuteTime',
-                                  'collapsed', 'widgets', 'language_info.*'
+                                  glob), e.g. 'collapsed', 'scrolled', 'widgets',
+                                  'language_info.*' (execution timing metadata
+                                  is only compared with --execution-count)
       --ignore-mime=PAT         ignore output mimetypes matching PAT, e.g.
                                   'image/*' or 'text/html'
       --unchanged=MODE          how to show unchanged cells: 'collapse' runs

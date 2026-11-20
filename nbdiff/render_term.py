@@ -36,8 +36,8 @@ from .outputs import OutputChange, OutputsDiff, Part, PartChange
 from .textdiff import (Line, LineDiff, format_context, format_normal, format_side_by_side,
                        format_unified, split_lines)
 
-TERM_MIME_PRIORITY = ["text", "error", "traceback", "text/plain", "text/markdown", "application/json",
-                      "text/latex", "text/html", "image/svg+xml", "application/javascript", "metadata", "raw"]
+TERM_MIME_PRIORITY = ["text", "error", "traceback", "application/vnd.plotly.v1+json", "text/plain",
+                      "text/markdown", "application/json", "text/latex", "text/html", "image/svg+xml", "application/javascript", "metadata", "raw"]
 
 
 @dataclass

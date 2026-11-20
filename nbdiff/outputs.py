@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from . import figures
 from .notebook import is_json_mime
 from .textdiff import CompareOptions, LineDiff, split_lines, text_key
 
@@ -102,9 +103,12 @@ class Part:
     data: str = ""  # whitespace-free base64 (for binary parts)
     nbytes: int = 0
     dims: Optional[Tuple[int, int]] = None
+    summary: Optional[str] = None  # overrides describe(), e.g. for plotly figures
 
     def describe(self) -> str:
         """One-line summary, e.g. 'image/png 23.4 KiB, 640×480 px'."""
+        if self.summary:
+            return self.summary
         if self.binary:
             s = human_size(self.nbytes)
             if self.dims:
@@ -150,7 +154,7 @@ class NormOutput:
 
 
 MIME_PRIORITY = [
-    "application/vnd.jupyter.widget-view+json", "application/javascript", "text/html",
+    figures.PLOTLY_MIME, "application/vnd.jupyter.widget-view+json", "application/javascript", "text/html",
     "text/markdown", "image/svg+xml", "text/latex", "image/png", "image/jpeg", "image/gif",
     "application/pdf", "application/json", "text/plain",
 ]
@@ -163,7 +167,34 @@ def _preferred_mime(mimes: Sequence[str]) -> Optional[str]:
     return mimes[0] if mimes else None
 
 
+def _plotly_part(mime: str, value: Any) -> Optional[Part]:
+    """Figure-aware parts for plotly JSON and plotly-generated HTML (see figures.py)."""
+    if mime == figures.PLOTLY_MIME:
+        fig = value
+        if isinstance(fig, str):
+            try:
+                fig = json.loads(fig)
+            except ValueError:
+                return None
+        if isinstance(fig, dict):
+            return Part(mime, False, text=figures.figure_text(fig), summary=figures.figure_summary(fig))
+    elif mime == "text/html" and isinstance(value, str) and "lotly" in value:
+        fig = figures.figure_from_html(value) if figures.is_plotly_html(value) else None
+        if fig is not None:
+            return Part(mime, False, text=figures.figure_text(fig),
+                        summary=figures.figure_summary(fig) + " (HTML)")
+        loader = figures.loader_text(value)
+        if loader is not None:
+            return Part(mime, False, text=loader, summary=loader)
+        if figures.is_plotly_html(value):
+            return Part(mime, False, text=figures.strip_plotly_ids(value))
+    return None
+
+
 def _make_part(mime: str, value: Any) -> Part:
+    special = _plotly_part(mime, value)
+    if special is not None:
+        return special
     if is_json_mime(mime) and not isinstance(value, str):
         return Part(mime, False, text=json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False))
     if is_binary_mime(mime) and isinstance(value, str):
@@ -200,9 +231,12 @@ def normalize_outputs(outputs: Sequence[Dict[str, Any]], include_metadata: bool 
             tb = strip_ansi("\n".join(o.get("traceback", [])))
             parts["traceback"] = Part("traceback", False, text=tb)
         elif t in ("execute_result", "display_data"):
-            for mime, value in (o.get("data") or {}).items():
-                if any(fnmatch.fnmatchcase(mime, pat) for pat in ignore_mimes):
-                    continue
+            data = {m: v for m, v in (o.get("data") or {}).items()
+                    if not any(fnmatch.fnmatchcase(m, pat) for pat in ignore_mimes)}
+            for mime, value in data.items():
+                if (mime == "text/html" and figures.PLOTLY_MIME in data and isinstance(value, str)
+                        and figures.is_plotly_html(value)):
+                    continue  # an HTML rendering of the plotly figure next to it (with a random div id)
                 parts[mime] = _make_part(mime, value)
             if include_metadata and o.get("metadata"):
                 parts["metadata"] = Part("metadata", False, text=json.dumps(
@@ -305,15 +339,27 @@ def diff_outputs(raw_a: Sequence[Dict[str, Any]], raw_b: Sequence[Dict[str, Any]
             continue
         # Within a changed region, pair outputs of the same kind (stream name /
         # output type) in order; anything left over was added or deleted.
-        sa, sb = A[i1:i2], B[j1:j2]
-        sub = SequenceMatcher(None, [o.signature for o in sa], [o.signature for o in sb], autojunk=False)
-        for t2, p1, p2, q1, q2 in sub.get_opcodes():
-            if t2 == "equal":
-                changes.extend(compare_pair(sa[p1 + k], sb[q1 + k], opts) for k in range(p2 - p1))
-            else:
-                changes.extend(OutputChange("deleted", o, None) for o in sa[p1:p2])
-                changes.extend(OutputChange("added", None, o) for o in sb[q1:q2])
+        _pair_region(A[i1:i2], B[j1:j2], opts, changes, strict=True)
     return OutputsDiff(changes, A, B)
+
+
+def _pair_region(sa: List[NormOutput], sb: List[NormOutput], opts: CompareOptions,
+                 changes: List[OutputChange], strict: bool) -> None:
+    """Pair changed outputs in order: first those of the same kind *and* the same
+    mimetypes (so a figure is not paired with a loader script that appeared
+    before it), then the rest by kind; leftovers were added or deleted."""
+    def key(o: NormOutput) -> Tuple:
+        return (o.signature, tuple(sorted(o.parts))) if strict else o.signature
+
+    sub = SequenceMatcher(None, [key(o) for o in sa], [key(o) for o in sb], autojunk=False)
+    for tag, p1, p2, q1, q2 in sub.get_opcodes():
+        if tag == "equal":
+            changes.extend(compare_pair(sa[p1 + k], sb[q1 + k], opts) for k in range(p2 - p1))
+        elif strict:
+            _pair_region(sa[p1:p2], sb[q1:q2], opts, changes, strict=False)
+        else:
+            changes.extend(OutputChange("deleted", o, None) for o in sa[p1:p2])
+            changes.extend(OutputChange("added", None, o) for o in sb[q1:q2])
 
 
 def outputs_equal(raw_a: Sequence[Dict[str, Any]], raw_b: Sequence[Dict[str, Any]], opts: CompareOptions,

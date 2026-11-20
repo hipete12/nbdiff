@@ -34,8 +34,8 @@ from .textdiff import LineDiff, format_unified, split_lines
 
 EMOJI = {"modified": "🟡", "added": "🟢", "deleted": "🔴", "moved": "🔵", "unchanged": "⚪",
          "moved-away": "🔵"}
-TEXT_PRIORITY = ["text", "traceback", "error", "text/plain", "text/markdown", "application/json",
-                 "text/latex", "text/html", "image/svg+xml", "application/javascript", "metadata", "raw"]
+TEXT_PRIORITY = ["text", "traceback", "error", "application/vnd.plotly.v1+json", "text/plain",
+                 "text/markdown", "application/json", "text/latex", "text/html", "image/svg+xml", "application/javascript", "metadata", "raw"]
 
 
 @dataclass
