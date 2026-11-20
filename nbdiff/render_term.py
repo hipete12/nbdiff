@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from .diff import CellDiff, MetaChange, NotebookDiff, short_json
+from .diff import CellDiff, MetaChange, NotebookDiff, short_json, similarity_pct
 from .outputs import OutputChange, OutputsDiff, Part, PartChange
 from .textdiff import (Line, LineDiff, format_context, format_normal, format_side_by_side,
                        format_unified, split_lines)
@@ -286,7 +286,7 @@ class TerminalRenderer:
             head += "modified: " + ", ".join(self.aspect_list(cd))
         line = s(head, *style)
         if cd.similarity is not None and ("source" in cd.changed or "type" in cd.changed):
-            line += s("  (%d%% similar)" % round(cd.similarity * 100), "dim")
+            line += s("  (%d%% similar)" % similarity_pct(cd.similarity), "dim")
         return line + self.hint(cd.hidden)
 
     def aspect_list(self, cd: CellDiff) -> List[str]:

@@ -8,7 +8,6 @@ dynamic = ["version"]
 description = "diff(1) for Jupyter notebooks: cell-aware source, output and metadata diffs, with an optional rendered diff notebook"
 readme = "README.md"
 requires-python = ">=3.8"
-license = { text = "MIT" }
 keywords = ["jupyter", "notebook", "ipynb", "diff", "cli"]
 classifiers = [
     "Environment :: Console",

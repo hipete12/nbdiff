@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
 from . import __version__
-from .diff import CellDiff, MetaChange, NotebookDiff, short_json
+from .diff import CellDiff, MetaChange, NotebookDiff, short_json, similarity_pct
 from .notebook import Cell, Notebook, output_to_v4
 from .outputs import OutputChange, OutputsDiff
 from .textdiff import LineDiff, format_unified, split_lines
@@ -354,7 +354,7 @@ class NotebookBuilder:
                     facts.append(asp)
             line = "**Changed:** " + ", ".join(facts)
             if cd.similarity is not None and ("source" in cd.changed or "type" in cd.changed):
-                line += " · %d%% similar" % round(cd.similarity * 100)
+                line += " · %d%% similar" % similarity_pct(cd.similarity)
             md += [line, ""]
         if cd.hidden:
             md += ["*Not compared but different: %s.*" % ", ".join(cd.hidden), ""]

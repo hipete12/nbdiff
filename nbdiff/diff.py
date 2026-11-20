@@ -243,3 +243,9 @@ def short_json(value: Any, limit: int = 80) -> str:
     if limit and len(s) > limit:
         s = s[: limit - 1] + "…"
     return s
+
+
+def similarity_pct(s: float) -> int:
+    """Similarity as a percentage; never shows 100 for cells that differ."""
+    pct = int(round(s * 100))
+    return min(pct, 99) if s < 1.0 else 100
