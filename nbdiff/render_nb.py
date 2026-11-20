@@ -189,7 +189,7 @@ class NotebookBuilder:
             for sec in sections:
                 nd = sec.diff
                 md.append("| %s | %s | %s | %s |" % (
-                    self._file_emoji(nd), code_span(sec.heading),
+                    self._file_emoji(nd), cell_escape(code_span(sec.heading)),
                     self._cell_counts(nd), cell_escape(self._result_line(nd) + (" — " + sec.note if sec.note else ""))))
             md.append("")
         md.append("")
@@ -240,7 +240,7 @@ class NotebookBuilder:
         md = ["| | Notebook | Cells | Kernel | nbformat | Modified |", "|---|---|---|---|---|---|"]
         for tag, nb in (("**A**", a), ("**B**", b)):
             md.append("| %s | %s | %s | %s | %s | %s |" % (
-                tag, code_span(nb.label), len(nb.cells) if nb.exists else "absent",
+                tag, cell_escape(code_span(nb.label)), len(nb.cells) if nb.exists else "absent",
                 cell_escape(nb.kernel_name or "—"), nb.format_version if nb.exists else "—", _ts(nb)))
         md.append("")
         md.append("**Result:** " + self._result_line(nd) + "  ")
@@ -272,7 +272,7 @@ class NotebookBuilder:
             md.append("| %s | %s | %s | %s | %s | %s | %s |" % (
                 EMOJI[cd.status], cd.a.number if cd.a else "—", cd.b.number if cd.b else "—",
                 cd.cell_type, cd.status, cell_escape(", ".join(cd.changed) or "—"),
-                code_span(first) if first else "*(empty)*"))
+                cell_escape(code_span(first)) if first else "*(empty)*"))
         unchanged = sum(1 for cd in nd.cells if cd.status == "unchanged")
         if unchanged:
             md += ["", "*%s not listed.*" % _plural(unchanged, "unchanged cell")]

@@ -152,6 +152,23 @@ class TestExitStatusAndBasics(CliTestCase):
         self.assertEqual(p.returncode, 1)
         self.assertIn(b"+++ -", p.stdout)
 
+    def test_control_characters_are_escaped(self):
+        a = write(self.path("crlf_a.ipynb"), nb(code("x = 1\r\ny = 2\r\n")))
+        b = write(self.path("crlf_b.ipynb"), nb(code("x = 1\r\ny = 3\r\n")))
+        _, out, _ = run("--color=never", a, b)
+        self.assertIn("+y = 3^M", out)
+        self.assertNotIn("\r", out)
+        self.assertEqual(run("--strip-trailing-cr", a, write(self.path("lf.ipynb"), nb(code("x = 1\ny = 2"))))[0], 0)
+
+    def test_visualize_escapes_table_pipes(self):
+        a = write(self.path("p_a.ipynb"), nb(code("x = a | b")))
+        b = write(self.path("p_b.ipynb"), nb(code("x = a | b | c")))
+        out_nb = self.path("pipes.ipynb")
+        run("--visualize", out_nb, a, b)
+        with open(out_nb) as f:
+            glance = "".join(json.load(f)["cells"][1]["source"])
+        self.assertIn("a \\| b \\| c", glance)
+
     def test_help_and_version(self):
         code_, out, _ = run("--help")
         self.assertEqual(code_, 0)

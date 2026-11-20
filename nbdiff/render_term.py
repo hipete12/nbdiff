@@ -27,6 +27,7 @@ Layout (unified format, colours omitted)::
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -84,6 +85,9 @@ LINE_STYLE = {"del": ("red",), "add": ("green",), "hunk": ("cyan",), "sep": ("cy
               "chg": ("yellow",), "note": ("dim",), "ctx": ()}
 
 
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
 def _plural(n: int, word: str) -> str:
     return "%d %s%s" % (n, word, "" if n == 1 else "s")
 
@@ -113,6 +117,11 @@ class TerminalRenderer:
         ro, s = self.ro, self.s
         text = line.text
         spans = line.spans
+        if _CONTROL.search(text):
+            # Show control characters (e.g. the \r of Windows line endings) in caret
+            # notation instead of letting them garble the terminal.
+            text = _CONTROL.sub(lambda m: "^" + chr(ord(m.group()) ^ 0x40), text)
+            spans = None
         if ro.expand_tabs and "\t" in text:
             text = text.expandtabs(ro.tabsize)
             spans = None
