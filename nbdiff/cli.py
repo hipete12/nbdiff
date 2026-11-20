@@ -506,7 +506,7 @@ class Runner:
                 if dir1 and dir2:
                     if args.recursive:
                         st = self.compare_dirs(p1, p2, top=False)
-                    elif self.printing and not args.brief:
+                    elif self.printing:
                         self.write_lines(["Common subdirectories: %s and %s" % (p1, p2)])
                 elif dir1 != dir2:
                     if name.endswith(".ipynb") or self._has_notebooks(p1 if dir1 else p2):
@@ -579,7 +579,7 @@ class Runner:
         """Invoked by git as GIT_EXTERNAL_DIFF / diff.<driver>.command (7 arguments)."""
         old_file, new_file, la, lb = ext
         path = files[0]
-        if not path.endswith(".ipynb"):
+        if not (path.endswith(".ipynb") or lb.endswith(".ipynb")):
             # Not a notebook: behave like plain diff so git keeps working.
             subprocess.call(["diff", "-u", "--label", la, "--label", lb, old_file, new_file])
             return EXIT_SAME
@@ -593,7 +593,8 @@ class Runner:
             a.exists = False
         if new_file == os.devnull:
             b.exists = False
-        self.report(a, b, header="nbdiff --git %s %s" % (la, lb))
+        xfrm = files[8].strip().replace("\n", "; ") if len(files) == 9 else ""
+        self.report(a, b, header="nbdiff --git %s %s" % (la, lb) + ("  (%s)" % xfrm if xfrm else ""))
         return EXIT_SAME  # git aborts if an external diff exits non-zero
 
     def run_git(self) -> int:

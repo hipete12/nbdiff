@@ -230,12 +230,13 @@ def load_pair(cmp: GitComparison, fp: FilePair) -> Tuple[Notebook, Notebook]:
 
 
 def parse_external_diff_args(args: Sequence[str]) -> Optional[Tuple[str, str, str, str]]:
-    """Recognise the 7 arguments git passes to GIT_EXTERNAL_DIFF / diff.external.
+    """Recognise the arguments git passes to GIT_EXTERNAL_DIFF / diff.<driver>.command.
 
-    ``path old-file old-hex old-mode new-file new-hex new-mode`` →
+    ``path old-file old-hex old-mode new-file new-hex new-mode`` (7 arguments,
+    plus ``new-path xfrm-msg`` for renames and copies: 9 arguments) →
     (old_file, new_file, label_a, label_b), or None if ``args`` is not that shape.
     """
-    if len(args) != 7:
+    if len(args) not in (7, 9):
         return None
 
     def is_mode(m: str) -> bool:
@@ -244,7 +245,8 @@ def parse_external_diff_args(args: Sequence[str]) -> Optional[Tuple[str, str, st
     def is_hex(h: str) -> bool:
         return h == "." or (len(h) >= 7 and all(c in "0123456789abcdef" for c in h.lower()))
 
-    path, old_file, old_hex, old_mode, new_file, new_hex, new_mode = args
+    path, old_file, old_hex, old_mode, new_file, new_hex, new_mode = args[:7]
     if not (is_mode(old_mode) and is_mode(new_mode) and is_hex(old_hex) and is_hex(new_hex)):
         return None
-    return old_file, new_file, "a/" + path, "b/" + path
+    new_path = args[7] if len(args) == 9 else path
+    return old_file, new_file, "a/" + path, "b/" + new_path
